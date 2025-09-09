@@ -41,7 +41,7 @@ jobs:
           unzip -q -o ndk.zip -d .ndk
           echo "ANDROID_NDK_ROOT=$PWD/.ndk/$(ls .ndk)" >> $GITHUB_ENV
       - name: run the build script
-        run: ./android.sh -d --enable-android-media-codec --enable-android-zlib --disable-arm-v7a
+        run: ./android.sh -d --full --enable-gpl
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -77,7 +77,7 @@ jobs:
           unzip -q -o ndk.zip -d .ndk
           echo "ANDROID_NDK_ROOT=$PWD/.ndk/$(ls .ndk)" >> $GITHUB_ENV
       - name: run the build script
-        run: ./android.sh -d --lts --enable-android-media-codec --enable-android-zlib
+        run: ./android.sh -d --lts --full --enable-gpl
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
