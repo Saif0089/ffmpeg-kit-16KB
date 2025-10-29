@@ -148,6 +148,8 @@ jobs:
             echo "Using cached Android NDK..."
           fi
           echo "ANDROID_NDK_ROOT=$PWD/.ndk/$(ls .ndk)" >> $GITHUB_ENV
+      - name: show available options
+        run: ./android.sh -h
       - name: run the build script
         run: ./android.sh -d --full --enable-gpl --enable-android-media-codec
         # run: ./android.sh -d --full --enable-gpl --disable-arm-v7a --disable-lib-openssl
@@ -294,6 +296,9 @@ jobs:
             echo "Using cached Android NDK..."
           fi
           echo "ANDROID_NDK_ROOT=$PWD/.ndk/$(ls .ndk)" >> $GITHUB_ENV
+
+      - name: show available options
+        run: ./android.sh -h
       - name: run the build script
         run: ./android.sh -d --lts --full --enable-gpl --enable-android-media-codec
         # run: ./android.sh -d --lts --full --enable-gpl --disable-arm-v7a --disable-lib-openssl
