@@ -14,11 +14,14 @@ android {
         versionName "6.0"
         project.archivesBaseName = "ffmpeg-kit"
         consumerProguardFiles "consumer-rules.pro"
+        // Limit resource configurations to reduce AAR size
+        resourceConfigurations = ["en"]
     }
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }

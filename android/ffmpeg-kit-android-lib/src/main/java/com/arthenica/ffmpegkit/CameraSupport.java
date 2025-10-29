@@ -27,6 +27,8 @@ import android.hardware.camera2.CameraMetadata;
 import android.os.Build;
 import android.util.Log;
 
+import com.arthenica.ffmpegkit.BuildConfig;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -60,7 +62,9 @@ class CameraSupport {
                         final Integer cameraSupport = chars.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL);
 
                         if (cameraSupport != null && cameraSupport == CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY) {
-                            Log.d(TAG, "Detected camera with id " + cameraId + " has LEGACY hardware level which is not supported by Android Camera2 NDK API.");
+                            if (BuildConfig.DEBUG) {
+                                Log.d(TAG, "Detected camera with id " + cameraId + " has LEGACY hardware level which is not supported by Android Camera2 NDK API.");
+                            }
                         } else if (cameraSupport != null) {
                             detectedCameraIdList.add(cameraId);
                         }

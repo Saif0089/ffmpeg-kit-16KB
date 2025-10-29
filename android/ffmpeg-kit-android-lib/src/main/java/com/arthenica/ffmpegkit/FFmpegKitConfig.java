@@ -29,6 +29,8 @@ import android.os.ParcelFileDescriptor;
 import android.provider.DocumentsContract;
 import android.util.SparseArray;
 
+import com.arthenica.ffmpegkit.BuildConfig;
+
 import com.arthenica.smartexception.java.Exceptions;
 
 import java.io.File;
@@ -133,7 +135,9 @@ public class FFmpegKitConfig {
 
         Exceptions.registerRootPackage("com.arthenica");
 
-        android.util.Log.i(FFmpegKitConfig.TAG, "Loading ffmpeg-kit.");
+        if (BuildConfig.DEBUG) {
+            android.util.Log.i(FFmpegKitConfig.TAG, "Loading ffmpeg-kit.");
+        }
 
         final boolean nativeFFmpegTriedAndFailed = NativeLoader.loadFFmpeg();
 
@@ -173,7 +177,9 @@ public class FFmpegKitConfig {
         safFileDescriptorMap = new SparseArray<>();
         globalLogRedirectionStrategy = LogRedirectionStrategy.PRINT_LOGS_WHEN_NO_CALLBACKS_DEFINED;
 
-        android.util.Log.i(FFmpegKitConfig.TAG, String.format("Loaded ffmpeg-kit-%s-%s-%s-%s.", NativeLoader.loadPackageName(), NativeLoader.loadAbi(), NativeLoader.loadVersion(), NativeLoader.loadBuildDate()));
+        if (BuildConfig.DEBUG) {
+            android.util.Log.i(FFmpegKitConfig.TAG, String.format("Loaded ffmpeg-kit-%s-%s-%s-%s.", NativeLoader.loadPackageName(), NativeLoader.loadAbi(), NativeLoader.loadVersion(), NativeLoader.loadBuildDate()));
+        }
     }
 
     /**
@@ -294,7 +300,9 @@ public class FFmpegKitConfig {
             break;
             case AV_LOG_TRACE:
             case AV_LOG_DEBUG: {
-                android.util.Log.d(TAG, text);
+                if (BuildConfig.DEBUG) {
+                    android.util.Log.d(TAG, text);
+                }
             }
             break;
             case AV_LOG_INFO: {
@@ -314,7 +322,9 @@ public class FFmpegKitConfig {
             case AV_LOG_STDERR:
             case AV_LOG_VERBOSE:
             default: {
-                android.util.Log.v(TAG, text);
+                if (BuildConfig.DEBUG) {
+                    android.util.Log.v(TAG, text);
+                }
             }
             break;
         }
@@ -410,13 +420,17 @@ public class FFmpegKitConfig {
         final File tempConfigurationDirectory = new File(cacheDir, "fontconfig");
         if (!tempConfigurationDirectory.exists()) {
             boolean tempFontConfDirectoryCreated = tempConfigurationDirectory.mkdirs();
-            android.util.Log.d(TAG, String.format("Created temporary font conf directory: %s.", tempFontConfDirectoryCreated));
+            if (BuildConfig.DEBUG) {
+                android.util.Log.d(TAG, String.format("Created temporary font conf directory: %s.", tempFontConfDirectoryCreated));
+            }
         }
 
         final File fontConfiguration = new File(tempConfigurationDirectory, "fonts.conf");
         if (fontConfiguration.exists()) {
             boolean fontConfigurationDeleted = fontConfiguration.delete();
-            android.util.Log.d(TAG, String.format("Deleted old temporary font configuration: %s.", fontConfigurationDeleted));
+            if (BuildConfig.DEBUG) {
+                android.util.Log.d(TAG, String.format("Deleted old temporary font configuration: %s.", fontConfigurationDeleted));
+            }
         }
 
         /* PROCESS MAPPINGS FIRST */
@@ -463,12 +477,16 @@ public class FFmpegKitConfig {
             outputStream.write(fontConfigBuilder.toString().getBytes());
             outputStream.flush();
 
-            android.util.Log.d(TAG, String.format("Saved new temporary font configuration with %d font name mappings.", validFontNameMappingCount));
+            if (BuildConfig.DEBUG) {
+                android.util.Log.d(TAG, String.format("Saved new temporary font configuration with %d font name mappings.", validFontNameMappingCount));
+            }
 
             setFontconfigConfigurationPath(tempConfigurationDirectory.getAbsolutePath());
 
             for (String fontDirectoryPath : fontDirectoryList) {
-                android.util.Log.d(TAG, String.format("Font directory %s registered successfully.", fontDirectoryPath));
+                if (BuildConfig.DEBUG) {
+                    android.util.Log.d(TAG, String.format("Font directory %s registered successfully.", fontDirectoryPath));
+                }
             }
 
         } catch (final IOException e) {
