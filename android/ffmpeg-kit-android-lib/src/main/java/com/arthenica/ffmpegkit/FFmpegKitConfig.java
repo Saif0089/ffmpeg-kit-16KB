@@ -29,7 +29,6 @@ import android.os.ParcelFileDescriptor;
 import android.provider.DocumentsContract;
 import android.util.SparseArray;
 
-import com.arthenica.ffmpegkit.BuildConfig;
 
 import com.arthenica.smartexception.java.Exceptions;
 
@@ -55,6 +54,11 @@ import java.util.concurrent.atomic.AtomicReference;
  * <p>Configuration class of <code>FFmpegKit</code> library.
  */
 public class FFmpegKitConfig {
+
+    /**
+     * Debug flag for logging. Set to false for release builds.
+     */
+    public static final boolean DEBUG = false;
 
     static class SAFProtocolUrl {
         private final Integer safId;
@@ -135,7 +139,7 @@ public class FFmpegKitConfig {
 
         Exceptions.registerRootPackage("com.arthenica");
 
-        if (BuildConfig.DEBUG) {
+        if (DEBUG) {
             android.util.Log.i(FFmpegKitConfig.TAG, "Loading ffmpeg-kit.");
         }
 
@@ -177,7 +181,7 @@ public class FFmpegKitConfig {
         safFileDescriptorMap = new SparseArray<>();
         globalLogRedirectionStrategy = LogRedirectionStrategy.PRINT_LOGS_WHEN_NO_CALLBACKS_DEFINED;
 
-        if (BuildConfig.DEBUG) {
+        if (DEBUG) {
             android.util.Log.i(FFmpegKitConfig.TAG, String.format("Loaded ffmpeg-kit-%s-%s-%s-%s.", NativeLoader.loadPackageName(), NativeLoader.loadAbi(), NativeLoader.loadVersion(), NativeLoader.loadBuildDate()));
         }
     }
@@ -300,7 +304,7 @@ public class FFmpegKitConfig {
             break;
             case AV_LOG_TRACE:
             case AV_LOG_DEBUG: {
-                if (BuildConfig.DEBUG) {
+                if (DEBUG) {
                     android.util.Log.d(TAG, text);
                 }
             }
@@ -322,7 +326,7 @@ public class FFmpegKitConfig {
             case AV_LOG_STDERR:
             case AV_LOG_VERBOSE:
             default: {
-                if (BuildConfig.DEBUG) {
+                if (DEBUG) {
                     android.util.Log.v(TAG, text);
                 }
             }
@@ -420,7 +424,7 @@ public class FFmpegKitConfig {
         final File tempConfigurationDirectory = new File(cacheDir, "fontconfig");
         if (!tempConfigurationDirectory.exists()) {
             boolean tempFontConfDirectoryCreated = tempConfigurationDirectory.mkdirs();
-            if (BuildConfig.DEBUG) {
+            if (DEBUG) {
                 android.util.Log.d(TAG, String.format("Created temporary font conf directory: %s.", tempFontConfDirectoryCreated));
             }
         }
@@ -428,7 +432,7 @@ public class FFmpegKitConfig {
         final File fontConfiguration = new File(tempConfigurationDirectory, "fonts.conf");
         if (fontConfiguration.exists()) {
             boolean fontConfigurationDeleted = fontConfiguration.delete();
-            if (BuildConfig.DEBUG) {
+            if (DEBUG) {
                 android.util.Log.d(TAG, String.format("Deleted old temporary font configuration: %s.", fontConfigurationDeleted));
             }
         }
@@ -477,14 +481,14 @@ public class FFmpegKitConfig {
             outputStream.write(fontConfigBuilder.toString().getBytes());
             outputStream.flush();
 
-            if (BuildConfig.DEBUG) {
+            if (DEBUG) {
                 android.util.Log.d(TAG, String.format("Saved new temporary font configuration with %d font name mappings.", validFontNameMappingCount));
             }
 
             setFontconfigConfigurationPath(tempConfigurationDirectory.getAbsolutePath());
 
             for (String fontDirectoryPath : fontDirectoryList) {
-                if (BuildConfig.DEBUG) {
+                if (DEBUG) {
                     android.util.Log.d(TAG, String.format("Font directory %s registered successfully.", fontDirectoryPath));
                 }
             }

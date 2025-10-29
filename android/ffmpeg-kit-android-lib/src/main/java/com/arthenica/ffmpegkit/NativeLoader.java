@@ -21,7 +21,6 @@ package com.arthenica.ffmpegkit;
 
 import android.os.Build;
 
-import com.arthenica.ffmpegkit.BuildConfig;
 import com.arthenica.smartexception.java.Exceptions;
 
 import java.text.SimpleDateFormat;
@@ -153,7 +152,7 @@ public class NativeLoader {
                     }
                     nativeFFmpegLoaded = true;
                 } catch (final Error e) {
-                    if (BuildConfig.DEBUG) {
+                    if (FFmpegKitConfig.DEBUG) {
                         android.util.Log.i(FFmpegKitConfig.TAG, String.format("NEON supported armeabi-v7a ffmpeg library not found. Loading default armeabi-v7a library.%s", Exceptions.getStackTraceString(e)));
                     }
                     nativeFFmpegTriedAndFailed = true;
@@ -184,7 +183,7 @@ public class NativeLoader {
                 nativeFFmpegKitLoaded = true;
                 AbiDetect.setArmV7aNeonLoaded();
             } catch (final Error e) {
-                if (BuildConfig.DEBUG) {
+                if (FFmpegKitConfig.DEBUG) {
                     android.util.Log.i(FFmpegKitConfig.TAG, String.format("NEON supported armeabi-v7a ffmpegkit library not found. Loading default armeabi-v7a library.%s", Exceptions.getStackTraceString(e)));
                 }
             }
