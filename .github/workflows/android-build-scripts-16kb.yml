@@ -26,167 +26,6 @@ on:
       - "android.sh"
 
 jobs:
-  build-main-on-linux:
-    name: android main on linux (ndk-r25-16k)
-    runs-on: ubuntu-24.04
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Cache apt packages
-        uses: actions/cache@v4
-        with:
-          path: /var/cache/apt
-          key: apt-packages-${{ runner.os }}-${{ hashFiles('**/android-build-scripts-16kb.yml') }}
-          restore-keys: |
-            apt-packages-${{ runner.os }}-
-            apt-packages-
-
-      - name: Cache CMake build
-        uses: actions/cache@v4
-        with:
-          path: |
-            /usr/local/bin/cmake
-            /usr/local/share/cmake-*
-            cmake-3.31.8
-          key: cmake-3.31.8-${{ runner.os }}-${{ hashFiles('**/android-build-scripts-16kb.yml') }}
-          restore-keys: |
-            cmake-3.31.8-${{ runner.os }}-
-            cmake-${{ runner.os }}-
-            cmake-
-
-      - name: Cache Android NDK
-        uses: actions/cache@v4
-        with:
-          path: .ndk
-          key: android-ndk-r23b-${{ runner.os }}
-          restore-keys: |
-            android-ndk-r23b-${{ runner.os }}
-            android-ndk-${{ runner.os }}
-            android-ndk-
-
-      - name: set up build tools
-        run: |
-          # Update apt cache only if not cached
-          if [ ! -d "/var/cache/apt/archives" ] || [ -z "$(ls -A /var/cache/apt/archives)" ]; then
-            echo "Installing system packages..."
-            sudo apt update && sudo apt -y install build-essential gperf groff meson autoconf automake autogen gnulib gettext gtk-doc-tools gnutls-bin libgnutls28-dev libssl-dev
-            sudo apt install -y dash git-core autoconf libtool gettext autopoint
-            sudo apt install -y automake python3 nettle-dev libp11-kit-dev libtspi-dev libunistring-dev
-            sudo apt install -y libtasn1-bin libtasn1-6-dev libidn2-0-dev gawk gperf
-            sudo apt install -y libtss2-dev libunbound-dev dns-root-data bison gtk-doc-tools
-            sudo apt install -y texinfo texlive texlive-plain-generic texlive-extra-utils
-            sudo apt install -y libfreetype6-dev libglib2.0-dev libcairo2-dev ragel
-            sudo apt install -y pkg-config nasm yasm libunistring-dev ninja-build
-            sudo apt install -y --reinstall gcc-14
-            sudo ln -s -f /usr/bin/gcc-14 /usr/bin/gcc
-          else
-            echo "Using cached apt packages, installing missing packages..."
-            sudo apt install -y build-essential gperf groff meson autoconf automake autogen gnulib gettext gtk-doc-tools gnutls-bin libgnutls28-dev libssl-dev
-            sudo apt install -y dash git-core autoconf libtool gettext autopoint
-            sudo apt install -y automake python3 nettle-dev libp11-kit-dev libtspi-dev libunistring-dev
-            sudo apt install -y libtasn1-bin libtasn1-6-dev libidn2-0-dev gawk gperf
-            sudo apt install -y libtss2-dev libunbound-dev dns-root-data bison gtk-doc-tools
-            sudo apt install -y texinfo texlive texlive-plain-generic texlive-extra-utils
-            sudo apt install -y libfreetype6-dev libglib2.0-dev libcairo2-dev ragel
-            sudo apt install -y pkg-config nasm yasm libunistring-dev ninja-build
-            sudo apt install -y --reinstall gcc-14
-            sudo ln -s -f /usr/bin/gcc-14 /usr/bin/gcc
-          fi
-
-          export OPENSSL_ROOT_DIR=/usr/include/openssl
-
-          # Build CMake only if not cached
-          if [ ! -f "/usr/local/bin/cmake" ]; then
-            echo "Building CMake from source..."
-            wget https://cmake.org/files/v3.31/cmake-3.31.8.tar.gz
-            tar -xzvf cmake-3.31.8.tar.gz
-            cd cmake-3.31.8
-            ./bootstrap
-            make -j$(nproc)
-            sudo make install
-            cd ..
-            rm -rf cmake-3.31.8 cmake-3.31.8.tar.gz
-          else
-            echo "Using cached CMake installation..."
-          fi
-
-          which cmake
-          /usr/local/bin/cmake
-          export PATH=/usr/local/bin/cmake:$PATH
-          source ~/.bashrc
-          cmake --version
-          gcc --version
-      - name: set up adopt jdk 17
-        uses: actions/setup-java@v3
-        with:
-          distribution: "adopt"
-          java-version: "17"
-
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
-            gradle-
-      - name: prerequisites
-        run: ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --uninstall "cmake;3.10.2.4988404" "cmake;3.18.1"
-      - name: set up android ndk r25 (16k support)
-        run: |
-          if [ ! -d ".ndk" ] || [ -z "$(ls -A .ndk)" ]; then
-            echo "Downloading Android NDK..."
-            curl -L -s "https://dl.google.com/android/repository/android-ndk-r23b-linux.zip" -o ndk.zip
-            unzip -q -o ndk.zip -d .ndk
-            rm ndk.zip
-          else
-            echo "Using cached Android NDK..."
-          fi
-          echo "ANDROID_NDK_ROOT=$PWD/.ndk/$(ls .ndk)" >> $GITHUB_ENV
-      - name: show available options
-        run: ./android.sh -h
-      - name: run the build script
-        run: |
-          ./android.sh -d -s -f \
-          --enable-gpl \
-          --disable-arm-v7a \
-          --disable-arm-v7a-neon \
-          --disable-x86 \
-          --disable-x86-64 \
-          --disable-lib-openssl \
-          --full \
-          --enable-libvidstab \
-          --enable-rubberband \
-          --enable-x264 \
-          --enable-x265 \
-          --enable-xvidcore
-        # run: ./android.sh -d --full --enable-gpl --disable-arm-v7a --disable-lib-openssl
-        # run: ./android.sh -d --disable-arm-v7a --enable-android-media-codec --enable-android-zlib --enable-gpl --enable-gnutls --enable-libaom --enable-libass --enable-freetype --enable-lame --enable-opus --enable-dav1d --enable-libvorbis --enable-libvpx --enable-x265
-      - name: prepare and upload main aar
-        run: |
-          AAR_PATH=$(find prebuilt -type f -name 'ffmpeg-kit.aar')
-          if [ -z "$AAR_PATH" ]; then
-            echo "Error: ffmpeg-kit.aar not found in prebuilt directory."
-            exit 1
-          fi
-          mv "$AAR_PATH" "ffmpeg-kit-main-ndk-r25-16k.aar"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ffmpeg-kit-main-aar
-          path: ffmpeg-kit-main-ndk-r25-16k.aar
-          if-no-files-found: error
-      - name: print build logs
-        if: ${{ always() }}
-        run: cat build.log
-      - name: print ffbuild logs
-        if: ${{ failure() }}
-        run: "[[ -f ./src/ffmpeg/ffbuild/config.log ]] && tail -50 ./src/ffmpeg/ffbuild/config.log"
-
   build-lts-on-linux:
     name: android lts on linux (ndk-r25-16k)
     runs-on: ubuntu-24.04
@@ -313,22 +152,22 @@ jobs:
       - name: show available options
         run: ./android.sh -h
       - name: run the build script
-        run: |
-          ./android.sh -d -s -f -l \
-          --enable-gpl \
-          --disable-arm-v7a \
-          --disable-arm-v7a-neon \
-          --disable-x86 \
-          --disable-x86-64 \
-          --disable-lib-openssl \
-          --full \
-          --enable-libvidstab \
-          --enable-rubberband \
-          --enable-x264 \
-          --enable-x265 \
-          --enable-xvidcore
+        # run: |
+          # ./android.sh -d -s -f -l \
+          # --enable-gpl \
+          # --disable-arm-v7a \
+          # --disable-arm-v7a-neon \
+          # --disable-x86 \
+          # --disable-x86-64 \
+          # --disable-lib-openssl \
+          # --full \
+          # --enable-libvidstab \
+          # --enable-rubberband \
+          # --enable-x264 \
+          # --enable-x265 \
+          # --enable-xvidcore
         # run: ./android.sh -d --lts --full --enable-gpl --disable-arm-v7a --disable-lib-openssl
-        # run: ./android.sh -d --lts --enable-android-media-codec --enable-android-zlib --enable-gpl --enable-gnutls --enable-libaom --enable-libass --enable-freetype --enable-lame --enable-opus --enable-dav1d --enable-libvorbis --enable-libvpx --enable-x265
+        run: ./android.sh -d --lts --enable-android-media-codec --enable-android-zlib --enable-gpl --disable-lib-openssl --enable-gnutls --enable-libaom --enable-libass --enable-freetype --enable-lame --enable-opus --enable-dav1d --enable-libvorbis --enable-libvpx --enable-x265
       - name: prepare and upload lts aar
         run: |
           AAR_PATH=$(find prebuilt -type f -name 'ffmpeg-kit.aar')
@@ -348,31 +187,3 @@ jobs:
       - name: print ffbuild logs
         if: ${{ failure() }}
         run: "[[ -f ./src/ffmpeg/ffbuild/config.log ]] && tail -50 ./src/ffmpeg/ffbuild/config.log"
-
-  create-release:
-    name: create github release
-    # This job will only start if BOTH of the jobs above complete successfully.
-    needs: [build-main-on-linux, build-lts-on-linux]
-    runs-on: ubuntu-latest
-    # This job will only run if the workflow is started manually.
-    if: github.event_name == 'workflow_dispatch'
-    permissions:
-      contents: write
-    steps:
-      - name: set release tag
-        id: set_tag
-        run: echo "TAG_NAME=ffmpeg-kit-android-$(date +'%Y-%m-%dT%H-%M-%S')" >> $GITHUB_ENV
-      - name: download all aar artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: aar-artifacts
-      - name: list downloaded files for debug
-        run: ls -R aar-artifacts
-      - name: create github release and upload assets
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ env.TAG_NAME }}
-          name: "Android AARs (NDK r25-16k) - ${{ env.TAG_NAME }}"
-          body: "Automated release of Android AAR files from Linux builds using NDK r25 with 16kB page size support."
-          prerelease: true
-          files: aar-artifacts/*/*.aar
