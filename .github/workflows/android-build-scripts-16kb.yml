@@ -34,25 +34,85 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v4
+
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt
+          key: apt-packages-${{ runner.os }}-${{ hashFiles('**/android-build-scripts-16kb.yml') }}
+          restore-keys: |
+            apt-packages-${{ runner.os }}-
+            apt-packages-
+
+      - name: Cache CMake build
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/local/bin/cmake
+            /usr/local/share/cmake-*
+            cmake-3.31.8
+          key: cmake-3.31.8-${{ runner.os }}-${{ hashFiles('**/android-build-scripts-16kb.yml') }}
+          restore-keys: |
+            cmake-3.31.8-${{ runner.os }}-
+            cmake-${{ runner.os }}-
+            cmake-
+
+      - name: Cache Android NDK
+        uses: actions/cache@v4
+        with:
+          path: .ndk
+          key: android-ndk-r23b-${{ runner.os }}
+          restore-keys: |
+            android-ndk-r23b-${{ runner.os }}
+            android-ndk-${{ runner.os }}
+            android-ndk-
+
       - name: set up build tools
         run: |
-          sudo apt update && sudo apt -y install build-essential gperf groff meson autoconf automake autogen gnulib gettext gtk-doc-tools gnutls-bin libgnutls28-dev libssl-dev
-          sudo apt install -y dash git-core autoconf libtool gettext autopoint
-          sudo apt install -y automake python3 nettle-dev libp11-kit-dev libtspi-dev libunistring-dev
-          sudo apt install -y libtasn1-bin libtasn1-6-dev libidn2-0-dev gawk gperf
-          sudo apt install -y libtss2-dev libunbound-dev dns-root-data bison gtk-doc-tools
-          sudo apt install -y texinfo texlive texlive-plain-generic texlive-extra-utils
-          sudo apt install -y libfreetype6-dev libglib2.0-dev libcairo2-dev ragel
-          sudo apt install -y pkg-config nasm yasm libunistring-dev ninja-build
-          sudo apt install -y --reinstall gcc-14
-          sudo ln -s -f /usr/bin/gcc-14 /usr/bin/gcc
+          # Update apt cache only if not cached
+          if [ ! -d "/var/cache/apt/archives" ] || [ -z "$(ls -A /var/cache/apt/archives)" ]; then
+            echo "Installing system packages..."
+            sudo apt update && sudo apt -y install build-essential gperf groff meson autoconf automake autogen gnulib gettext gtk-doc-tools gnutls-bin libgnutls28-dev libssl-dev
+            sudo apt install -y dash git-core autoconf libtool gettext autopoint
+            sudo apt install -y automake python3 nettle-dev libp11-kit-dev libtspi-dev libunistring-dev
+            sudo apt install -y libtasn1-bin libtasn1-6-dev libidn2-0-dev gawk gperf
+            sudo apt install -y libtss2-dev libunbound-dev dns-root-data bison gtk-doc-tools
+            sudo apt install -y texinfo texlive texlive-plain-generic texlive-extra-utils
+            sudo apt install -y libfreetype6-dev libglib2.0-dev libcairo2-dev ragel
+            sudo apt install -y pkg-config nasm yasm libunistring-dev ninja-build
+            sudo apt install -y --reinstall gcc-14
+            sudo ln -s -f /usr/bin/gcc-14 /usr/bin/gcc
+          else
+            echo "Using cached apt packages, installing missing packages..."
+            sudo apt install -y build-essential gperf groff meson autoconf automake autogen gnulib gettext gtk-doc-tools gnutls-bin libgnutls28-dev libssl-dev
+            sudo apt install -y dash git-core autoconf libtool gettext autopoint
+            sudo apt install -y automake python3 nettle-dev libp11-kit-dev libtspi-dev libunistring-dev
+            sudo apt install -y libtasn1-bin libtasn1-6-dev libidn2-0-dev gawk gperf
+            sudo apt install -y libtss2-dev libunbound-dev dns-root-data bison gtk-doc-tools
+            sudo apt install -y texinfo texlive texlive-plain-generic texlive-extra-utils
+            sudo apt install -y libfreetype6-dev libglib2.0-dev libcairo2-dev ragel
+            sudo apt install -y pkg-config nasm yasm libunistring-dev ninja-build
+            sudo apt install -y --reinstall gcc-14
+            sudo ln -s -f /usr/bin/gcc-14 /usr/bin/gcc
+          fi
+
           export OPENSSL_ROOT_DIR=/usr/include/openssl
-          wget https://cmake.org/files/v3.31/cmake-3.31.8.tar.gz
-          tar -xzvf cmake-3.31.8.tar.gz
-          cd cmake-3.31.8
-          ./bootstrap
-          make -j$(nproc)
-          sudo make install
+
+          # Build CMake only if not cached
+          if [ ! -f "/usr/local/bin/cmake" ]; then
+            echo "Building CMake from source..."
+            wget https://cmake.org/files/v3.31/cmake-3.31.8.tar.gz
+            tar -xzvf cmake-3.31.8.tar.gz
+            cd cmake-3.31.8
+            ./bootstrap
+            make -j$(nproc)
+            sudo make install
+            cd ..
+            rm -rf cmake-3.31.8 cmake-3.31.8.tar.gz
+          else
+            echo "Using cached CMake installation..."
+          fi
+
           which cmake
           /usr/local/bin/cmake
           export PATH=/usr/local/bin/cmake:$PATH
@@ -64,12 +124,29 @@ jobs:
         with:
           distribution: "adopt"
           java-version: "17"
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+            gradle-
       - name: prerequisites
         run: ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --uninstall "cmake;3.10.2.4988404" "cmake;3.18.1"
       - name: set up android ndk r25 (16k support)
         run: |
-          curl -L -s "https://dl.google.com/android/repository/android-ndk-r23b-linux.zip" -o ndk.zip
-          unzip -q -o ndk.zip -d .ndk
+          if [ ! -d ".ndk" ] || [ -z "$(ls -A .ndk)" ]; then
+            echo "Downloading Android NDK..."
+            curl -L -s "https://dl.google.com/android/repository/android-ndk-r23b-linux.zip" -o ndk.zip
+            unzip -q -o ndk.zip -d .ndk
+            rm ndk.zip
+          else
+            echo "Using cached Android NDK..."
+          fi
           echo "ANDROID_NDK_ROOT=$PWD/.ndk/$(ls .ndk)" >> $GITHUB_ENV
       - name: run the build script
         run: ./android.sh -d --full --enable-gpl --enable-android-media-codec --enable-libx264 --enable-libx265
@@ -103,25 +180,85 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v4
+
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt
+          key: apt-packages-${{ runner.os }}-${{ hashFiles('**/android-build-scripts-16kb.yml') }}
+          restore-keys: |
+            apt-packages-${{ runner.os }}-
+            apt-packages-
+
+      - name: Cache CMake build
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/local/bin/cmake
+            /usr/local/share/cmake-*
+            cmake-3.31.8
+          key: cmake-3.31.8-${{ runner.os }}-${{ hashFiles('**/android-build-scripts-16kb.yml') }}
+          restore-keys: |
+            cmake-3.31.8-${{ runner.os }}-
+            cmake-${{ runner.os }}-
+            cmake-
+
+      - name: Cache Android NDK
+        uses: actions/cache@v4
+        with:
+          path: .ndk
+          key: android-ndk-r23b-${{ runner.os }}
+          restore-keys: |
+            android-ndk-r23b-${{ runner.os }}
+            android-ndk-${{ runner.os }}
+            android-ndk-
+
       - name: set up build tools
         run: |
-          sudo apt update && sudo apt -y install build-essential gperf groff meson autoconf automake autogen gnulib gettext gtk-doc-tools gnutls-bin libgnutls28-dev libssl-dev
-          sudo apt install -y dash git-core autoconf libtool gettext autopoint
-          sudo apt install -y automake python3 nettle-dev libp11-kit-dev libtspi-dev libunistring-dev
-          sudo apt install -y libtasn1-bin libtasn1-6-dev libidn2-0-dev gawk gperf
-          sudo apt install -y libtss2-dev libunbound-dev dns-root-data bison gtk-doc-tools
-          sudo apt install -y texinfo texlive texlive-plain-generic texlive-extra-utils
-          sudo apt install -y libfreetype6-dev libglib2.0-dev libcairo2-dev ragel
-          sudo apt install -y pkg-config nasm yasm libunistring-dev ninja-build
-          sudo apt install -y --reinstall gcc-14
-          sudo ln -s -f /usr/bin/gcc-14 /usr/bin/gcc
+          # Update apt cache only if not cached
+          if [ ! -d "/var/cache/apt/archives" ] || [ -z "$(ls -A /var/cache/apt/archives)" ]; then
+            echo "Installing system packages..."
+            sudo apt update && sudo apt -y install build-essential gperf groff meson autoconf automake autogen gnulib gettext gtk-doc-tools gnutls-bin libgnutls28-dev libssl-dev
+            sudo apt install -y dash git-core autoconf libtool gettext autopoint
+            sudo apt install -y automake python3 nettle-dev libp11-kit-dev libtspi-dev libunistring-dev
+            sudo apt install -y libtasn1-bin libtasn1-6-dev libidn2-0-dev gawk gperf
+            sudo apt install -y libtss2-dev libunbound-dev dns-root-data bison gtk-doc-tools
+            sudo apt install -y texinfo texlive texlive-plain-generic texlive-extra-utils
+            sudo apt install -y libfreetype6-dev libglib2.0-dev libcairo2-dev ragel
+            sudo apt install -y pkg-config nasm yasm libunistring-dev ninja-build
+            sudo apt install -y --reinstall gcc-14
+            sudo ln -s -f /usr/bin/gcc-14 /usr/bin/gcc
+          else
+            echo "Using cached apt packages, installing missing packages..."
+            sudo apt install -y build-essential gperf groff meson autoconf automake autogen gnulib gettext gtk-doc-tools gnutls-bin libgnutls28-dev libssl-dev
+            sudo apt install -y dash git-core autoconf libtool gettext autopoint
+            sudo apt install -y automake python3 nettle-dev libp11-kit-dev libtspi-dev libunistring-dev
+            sudo apt install -y libtasn1-bin libtasn1-6-dev libidn2-0-dev gawk gperf
+            sudo apt install -y libtss2-dev libunbound-dev dns-root-data bison gtk-doc-tools
+            sudo apt install -y texinfo texlive texlive-plain-generic texlive-extra-utils
+            sudo apt install -y libfreetype6-dev libglib2.0-dev libcairo2-dev ragel
+            sudo apt install -y pkg-config nasm yasm libunistring-dev ninja-build
+            sudo apt install -y --reinstall gcc-14
+            sudo ln -s -f /usr/bin/gcc-14 /usr/bin/gcc
+          fi
+
           export OPENSSL_ROOT_DIR=/usr/include/openssl
-          wget https://cmake.org/files/v3.31/cmake-3.31.8.tar.gz
-          tar -xzvf cmake-3.31.8.tar.gz
-          cd cmake-3.31.8
-          ./bootstrap
-          make -j$(nproc)
-          sudo make install
+
+          # Build CMake only if not cached
+          if [ ! -f "/usr/local/bin/cmake" ]; then
+            echo "Building CMake from source..."
+            wget https://cmake.org/files/v3.31/cmake-3.31.8.tar.gz
+            tar -xzvf cmake-3.31.8.tar.gz
+            cd cmake-3.31.8
+            ./bootstrap
+            make -j$(nproc)
+            sudo make install
+            cd ..
+            rm -rf cmake-3.31.8 cmake-3.31.8.tar.gz
+          else
+            echo "Using cached CMake installation..."
+          fi
+
           which cmake
           /usr/local/bin/cmake
           export PATH=/usr/local/bin/cmake:$PATH
@@ -133,12 +270,29 @@ jobs:
         with:
           distribution: "adopt"
           java-version: "17"
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+            gradle-
       - name: prerequisites
         run: ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --uninstall "cmake;3.10.2.4988404" "cmake;3.18.1"
       - name: set up android ndk r25 (16k support)
         run: |
-          curl -L -s "https://dl.google.com/android/repository/android-ndk-r23b-linux.zip" -o ndk.zip
-          unzip -q -o ndk.zip -d .ndk
+          if [ ! -d ".ndk" ] || [ -z "$(ls -A .ndk)" ]; then
+            echo "Downloading Android NDK..."
+            curl -L -s "https://dl.google.com/android/repository/android-ndk-r23b-linux.zip" -o ndk.zip
+            unzip -q -o ndk.zip -d .ndk
+            rm ndk.zip
+          else
+            echo "Using cached Android NDK..."
+          fi
           echo "ANDROID_NDK_ROOT=$PWD/.ndk/$(ls .ndk)" >> $GITHUB_ENV
       - name: run the build script
         run: ./android.sh -d --lts --full --enable-gpl --enable-android-media-codec --enable-libx264 --enable-libx265
