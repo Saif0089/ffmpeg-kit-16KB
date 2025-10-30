@@ -146,8 +146,15 @@ public final class AsyncFrameEncoder {
         } else {
             return concat(new String[]{
                 "-hide_banner",
+                // Help FFmpeg demux MJPEG over a pipe reliably
+                "-fflags", "+nobuffer",
+                "-probesize", "50M",
+                "-analyzeduration", "50M",
                 "-f", "image2pipe",
+                "-vcodec", "mjpeg",
                 "-r", String.valueOf(fps),
+                "-use_wallclock_as_timestamps", "1",
+                "-thread_queue_size", "512",
                 "-i", inputPipe,
                 "-an",
                 "-c:v", "h264_mediacodec"
