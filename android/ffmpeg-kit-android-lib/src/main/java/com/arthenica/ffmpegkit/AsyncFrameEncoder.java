@@ -146,7 +146,7 @@ public final class AsyncFrameEncoder {
         } else {
             return concat(new String[]{
                 "-hide_banner",
-                // Help FFmpeg demux MJPEG over a pipe reliably
+                "-hwaccel", "mediacodec",
                 "-fflags", "+nobuffer",
                 "-probesize", "50M",
                 "-analyzeduration", "50M",
